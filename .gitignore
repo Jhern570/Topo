@@ -1,0 +1,10 @@
+# Environment files
+frontend/Topo/.env
+backend/.env
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
