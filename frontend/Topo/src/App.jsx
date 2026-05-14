@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import axios from "axios";
 
@@ -6,6 +6,12 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 function App() {
   const mapContainer = useRef(null);
+
+  const [selectedParcel, setSelectedParcel] = useState(null);
+
+  useEffect(() => {
+    console.log("STATE UPDATED:", selectedParcel);
+  }, [selectedParcel]);
 
   useEffect(() => {
     const map = new mapboxgl.Map({
@@ -76,19 +82,47 @@ function App() {
             },
           });
 
+          if (selectedParcel && selectedParcel.id === parcel.id) {
+            parcel.lots.forEach((lot) => {
+              map.addSource(`lot-${lot.id}`, {
+                type: "geojson",
+                data: {
+                  type: "Feature",
+                  geometry: {
+                    type: "Polygon",
+                    coordinates: [lot.coordinates],
+                  },
+                },
+              });
+
+              map.addLayer({
+                id: `lot-fill-${lot.id}`,
+                type: "fill",
+                source: `lot-${lot.id}`,
+                paint: {
+                  "fill-color": "#00ff88",
+                  "fill-opacity": 0.5,
+                },
+              });
+            });
+          }
+
           // Click event
           map.on("click", `parcel-fill-${parcel.id}`, (e) => {
-            new mapboxgl.Popup()
-              .setLngLat(e.lngLat)
-              .setHTML(
-                `
-            <h3>${parcel.name}</h3>
-            <p>Price: $${parcel.price}</p>
-            <p>Acres: ${parcel.acres}</p>
-            <p>$/Acre: $${pricePerAcre}</p>
-          `,
-              )
-              .addTo(map);
+            console.log(selectedParcel);
+            setSelectedParcel(parcel);
+
+            //   new mapboxgl.Popup()
+            //     .setLngLat(e.lngLat)
+            //     .setHTML(
+            //       `
+            //   <h3>${parcel.name}</h3>
+            //   <p>Price: $${parcel.price}</p>
+            //   <p>Acres: ${parcel.acres}</p>
+            //   <p>$/Acre: $${pricePerAcre}</p>
+            // `,
+            //     )
+            //     .addTo(map);
           });
         });
       });
