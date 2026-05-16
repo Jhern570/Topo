@@ -6,6 +6,7 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 function App() {
   const mapContainer = useRef(null);
+  const mapRef = useRef(null);
 
   const [selectedParcel, setSelectedParcel] = useState(null);
 
@@ -21,29 +22,7 @@ function App() {
       zoom: 10,
     });
 
-    // // Fetch parcels from backend
-    // axios
-    //   .get(import.meta.env.VITE_API_URL + "/api/parcels")
-    //   .then((res) => {
-    //     res.data.forEach((parcel) => {
-    //       const pricePerAcre = (parcel.price / parcel.acres).toFixed(2);
-
-    //       const popup = new mapboxgl.Popup().setHTML(`
-    //         <h3>${parcel.name}</h3>
-    //         <p>Price: $${parcel.price}</p>
-    //         <p>Acres: ${parcel.acres}</p>
-    //         <p>$/Acre: $${pricePerAcre}</p>
-    //       `);
-
-    //       new mapboxgl.Marker()
-    //         .setLngLat([parcel.lng, parcel.lat])
-    //         .setPopup(popup)
-    //         .addTo(map);
-    //     });
-    //   })
-    //   .catch((err) => {
-    //     console.error("Error fetching parcels:", err);
-    //   });
+    mapRef.current = map;
 
     map.on("load", () => {
       // your axios + addLayer code here
@@ -82,36 +61,20 @@ function App() {
             },
           });
 
-          if (selectedParcel && selectedParcel.id === parcel.id) {
-            parcel.lots.forEach((lot) => {
-              map.addSource(`lot-${lot.id}`, {
-                type: "geojson",
-                data: {
-                  type: "Feature",
-                  geometry: {
-                    type: "Polygon",
-                    coordinates: [lot.coordinates],
-                  },
-                },
-              });
-
-              map.addLayer({
-                id: `lot-fill-${lot.id}`,
-                type: "fill",
-                source: `lot-${lot.id}`,
-                paint: {
-                  "fill-color": "#00ff88",
-                  "fill-opacity": 0.5,
-                },
-              });
-            });
-          }
-
           // Click event
           map.on("click", `parcel-fill-${parcel.id}`, (e) => {
-            console.log(selectedParcel);
             setSelectedParcel(parcel);
+            map.flyTo({
+              center: [-118.25, 34.04],
+              zoom: 13,
+              duration: 2000,
+            });
 
+            map.setPaintProperty(
+              `parcel-fill-${parcel.id}`,
+              "fill-opacity",
+              0.15,
+            );
             //   new mapboxgl.Popup()
             //     .setLngLat(e.lngLat)
             //     .setHTML(
@@ -128,6 +91,38 @@ function App() {
       });
     });
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selectedParcel) return;
+
+    console.log("DRAWING LOTS");
+
+    selectedParcel.lots.forEach((lot) => {
+      if (map.getSource(`lot-${lot.id}`)) return; // prevent duplicates
+
+      map.addSource(`lot-${lot.id}`, {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          geometry: {
+            type: "Polygon",
+            coordinates: [lot.coordinates],
+          },
+        },
+      });
+
+      map.addLayer({
+        id: `lot-fill-${lot.id}`,
+        type: "fill",
+        source: `lot-${lot.id}`,
+        paint: {
+          "fill-color": "#00ff88",
+          "fill-opacity": 0.5,
+        },
+      });
+    });
+  }, [selectedParcel]);
 
   return (
     <div>
